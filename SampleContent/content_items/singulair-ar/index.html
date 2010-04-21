@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html style='margin: 0; width: 100%; height: 100%;'>
+	<head>
+		<script src="support/javascripts/application.js" type="text/javascript" charset="utf-8"></script>
+		<script>
+		function orientationChanged() {
+			var e = document.getElementsByTagName('video')[0];
+			e.width = (e.width == 768) ? 1024 : 768;
+			e.height = (e.height == 768) ? 1024 : 768;
+		}
+		</script>
+	</head>
+
+	<body onorientationchange='orientationChanged();' style='margin: 0; width: 100%; height: 100%;'>
+		<video src='video/video.m4v' autoplay='true' controls='true' width='768' height='1024'>Pathophysiology of allergic rhinitis</video>
+	</body>
+</html>

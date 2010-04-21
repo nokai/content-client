@@ -1,0 +1,52 @@
+require 'rubygems'
+require 'rake'
+require 'json/pure'
+
+CONTENT_MANIFEST_FILE_NAME = 'manifest.json'
+CONTENT_MANIFEST_MD5_HASH_FILE_NAME = 'manifest.fingerprint'
+CONTENT_ITEMS_DIR_NAME = 'content_items'
+CONTENT_ARCHIVES_DIR_NAME = 'content_archives'
+
+def md5(file_path)
+  %x{md5 "#{file_path}"}.split("=")[1].chomp.gsub(' ', '')
+end
+
+task :build_archives do
+  content_manifest = {}
+  
+  # get absolute paths
+  content_items_dir_path = File.expand_path("./#{CONTENT_ITEMS_DIR_NAME}")
+  content_archives_dir_path = File.expand_path("./#{CONTENT_ARCHIVES_DIR_NAME}")
+  
+  # clean archive dir
+  puts %x{rm -fr #{content_archives_dir_path}; mkdir -p #{content_archives_dir_path}}
+  
+  content_item_metadata_list = []
+  
+  # create zip archive and metadata for each content item
+  Dir["#{content_items_dir_path}/*"].each do |path|
+    obj = {}
+    basename = File.basename(path); obj[:contentItemDirectoryName] = basename;
+    content_item_archive_file_name = "#{basename}.zip"; obj[:content_item_archive_file_name] = content_item_archive_file_name;
+    archive_file_path = "#{content_archives_dir_path}/#{content_item_archive_file_name}"; obj[:archive_file_path] = archive_file_path;
+
+    cd(path) do
+      content_item_manifest = File.open(CONTENT_MANIFEST_FILE_NAME, 'r') {|f| f.read }
+      obj[:content_item_manifest] = JSON.parse(content_item_manifest)
+      %x{zip -r "#{archive_file_path}" ./}
+      md5_hash = md5(archive_file_path); obj[:md5_hash] = md5_hash
+    end
+    content_item_metadata_list << obj
+  end
+  
+  content_manifest[:content_archives_dir_name] = CONTENT_ARCHIVES_DIR_NAME
+  content_manifest[:content_item_metadata_list] = content_item_metadata_list
+  
+  # write the master content metadata file
+  File.open(CONTENT_MANIFEST_FILE_NAME, 'w') {|f| f.write JSON.pretty_generate(content_manifest) }
+  
+  # write md5 hash of master content metadata file
+  File.open(CONTENT_MANIFEST_MD5_HASH_FILE_NAME, 'w') {|f| f.write md5(CONTENT_MANIFEST_FILE_NAME) }
+    
+  puts %x{cat #{CONTENT_MANIFEST_FILE_NAME}}
+end

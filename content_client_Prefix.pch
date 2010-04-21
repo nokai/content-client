@@ -1,0 +1,9 @@
+//
+// Prefix header for all source files of the 'content-client' target in the 'content-client' project
+//
+
+#ifdef __OBJC__
+    #import <Foundation/Foundation.h>
+    #import <UIKit/UIKit.h>
+	#import "JSON.h"
+#endif

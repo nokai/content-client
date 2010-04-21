@@ -1,0 +1,16 @@
+{
+  "content_item_metadata_list": [
+    {
+      "content_item_archive_file_name": "singulair-ar.zip",
+      "archive_file_path": "/Users/brianpfeil/projects/content-client/SampleContent/content_archives/singulair-ar.zip",
+      "content_item_manifest": {
+        "name": "Singulair AR",
+        "contentFileName": "index.html",
+        "description": ""
+      },
+      "md5_hash": "2a124f94ad4d6c6dfb322b96ce40ade4",
+      "contentItemDirectoryName": "singulair-ar"
+    }
+  ],
+  "content_archives_dir_name": "content_archives"
+}
