@@ -71,13 +71,43 @@
 	//[webView loadRequest:[NSURLRequest requestWithURL:contentItemURL]];
 }
 
+- (NSString*)stringByEvaluatingJavaScriptFunction:(NSString*)functionName withArgument:(id)argument {
+	NSString *argumentStringRepresentation = (argument == nil) ? @"" : [argument JSONRepresentation];
+	NSString *javaScriptCode = [NSString stringWithFormat:@"(function() { %@(%@); })();", functionName, argumentStringRepresentation];
+	// only execute javascript code if we are done loading
+	if (!contentWebView.loading) {
+		return [contentWebView stringByEvaluatingJavaScriptFromString:javaScriptCode];			
+	} else {
+		[NSException raise:@"Execute javascript code before the page has finished loading" format:@"Trying to execute javascript code before the page has finished loading"];
+	}
+}
+
+#pragma mark UIWebViewDelegate
+
+- (void)webViewDidStartLoad:(UIWebView *)webView {
+}
+
+- (void)webViewDidFinishLoad:(UIWebView *)webView {
+}
+
+- (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
+}
+
+- (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
+	return YES;
+}
+
+#pragma mark orientation
+
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
     // Overriden to allow any orientation.
     return YES;
 }
 
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
-	[contentWebView stringByEvaluatingJavaScriptFromString:@"orientationChanged();"];
+	[self stringByEvaluatingJavaScriptFunction:@"orientationChanged" withArgument:nil];
+	
+	//[contentWebView stringByEvaluatingJavaScriptFromString:@"orientationChanged();"];
 }
 
 
