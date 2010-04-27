@@ -20,7 +20,7 @@
 
 @implementation AppDelegate_Shared
 
-@synthesize window, contentPlayerViewController, webView;
+@synthesize window, navigationController, contentPlayerViewController, webView;
 
 - (void)displayContentPlayer {
 	
@@ -34,13 +34,16 @@
 	
 	if (contentPlayerViewController == nil) {
 		self.contentPlayerViewController = [[ContentPlayerViewController alloc] initWithNibName:@"ContentPlayerViewController" bundle:nil];
+		contentPlayerViewController.title = @"Content Player";
 		ContentManager *defaultContentManager = [ContentManager defaultContentManager];
 		NSError *err;
 		[defaultContentManager sync:&err];
 		contentPlayerViewController.contentManager = defaultContentManager;
 	}
 	
-	[window addSubview:contentPlayerViewController.view];
+	self.navigationController = [[UINavigationController alloc] initWithRootViewController:contentPlayerViewController];
+	
+	[window addSubview:navigationController.view];
 }
 
 

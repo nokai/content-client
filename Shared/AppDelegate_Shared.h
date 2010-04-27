@@ -18,6 +18,7 @@
     NSPersistentStoreCoordinator *persistentStoreCoordinator;
     
     UIWindow *window;
+	UINavigationController *navigationController;
 	ContentPlayerViewController *contentPlayerViewController;
 	
 	
@@ -32,6 +33,7 @@
 @property (nonatomic, retain, readonly) NSPersistentStoreCoordinator *persistentStoreCoordinator;
 
 @property (nonatomic, retain) IBOutlet UIWindow *window;
+@property (nonatomic, retain) IBOutlet UINavigationController *navigationController;
 @property (nonatomic, retain) IBOutlet ContentPlayerViewController *contentPlayerViewController;
 @property (nonatomic, retain) IBOutlet UIWebView *webView;
 

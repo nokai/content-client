@@ -35,7 +35,6 @@ static ContentManager *defaultContentManager = nil;
 - (NSString*)contentManifesFileContents;
 - (NSString*)contentManifestHashFilePath;
 - (NSString*)contentManifestHashFileContents;
-- (BOOL)unpackContentItemArchive:(NSString*)contentItemArchiveFilePath toDirectoryPath:(NSString*)directoryPath;
 - (BOOL)localContentManifestFileExists;
 @end
 
@@ -267,7 +266,7 @@ static ContentManager *defaultContentManager = nil;
 	return YES;
 }
 
-- (BOOL)downloadContentItemArchive:(NSDictionary*)contentItemMetaData {
+- (BOOL)downloadContentItemArchive:(NSDictionary*)contentItemMetaData unpackToDirectoryPath:(NSString*)unpackToDirectoryPath {
 	NSString *contentItemArchiveFileName = [contentItemMetaData valueForKey:kCMKeyContentItemArchiveFileName];
 	NSString *contentArchivesDirName = [contentManifest valueForKey:kCMKeyContentArchivesDirName];
 	NSString *contentItemArchiveURLString = [NSString stringWithFormat:@"%@/%@/%@", [self contentServerBaseURL], contentArchivesDirName, contentItemArchiveFileName];
@@ -280,11 +279,14 @@ static ContentManager *defaultContentManager = nil;
 		downloadManager.delegate = self;
 	}
 	
-	//[downloadManager downloadFileAtURL:contentItemArchiveURL toDestinationFilePath:contentItemArchiveFilePath error:&err];
 	
-	BOOL createdFile = [[NSFileManager defaultManager] createFileAtPath:contentItemArchiveFilePath contents:contentItemArchiveData attributes:nil];
+	NSError *err;
+	[downloadManager downloadFileAtURL:contentItemArchiveURL toDestinationFilePath:contentItemArchiveFilePath unpackToDirectoryPath:(NSString*)unpackToDirectoryPath error:&err];
 	
-	if (createdFile) {
+	
+	//BOOL createdFile = [[NSFileManager defaultManager] createFileAtPath:contentItemArchiveFilePath contents:contentItemArchiveData attributes:nil];
+	
+	//if (createdFile) {
 		//TODO: this is broken and +Utl fileMD5 causes app crash
 		/*
 		NSString *remoteMD5Hash = [contentItemMetaData valueForKey:@"md5_hash"];
@@ -299,9 +301,9 @@ static ContentManager *defaultContentManager = nil;
 		 */
 		return YES;
 		
-	} else {
-		return NO;
-	}
+	//} else {
+	//	return NO;
+	//}
 	
 }
 
@@ -316,6 +318,8 @@ static ContentManager *defaultContentManager = nil;
 	}	
 	
 	BOOL remoteContentManifestHashFileChanged;
+	
+	// get the latest content manifest from server
 	BOOL updateSuccess = [self updateContentManifestHashFile:&remoteContentManifestHashFileChanged];
 	
 	if (!updateSuccess) {
@@ -323,53 +327,31 @@ static ContentManager *defaultContentManager = nil;
 		return NO;
 	}
 	
+	// content hasn't changed
 	if (updateSuccess && !remoteContentManifestHashFileChanged) {
 		return YES;
 	}
 	
+	// content has changed
 	if (updateSuccess && remoteContentManifestHashFileChanged) {
 		if ([self isConnected]) {		
 			[self downloadContentManifest];
 		}
 	}
 	
-	//NSString *contentArchivesDirName = [contentManifest valueForKey:kCMKeyContentArchivesDirName];
-	
 	NSArray *contentItemMetaDataList = [contentManifest valueForKey:kCMKeyContentItemMetaDataList];
 	for (NSDictionary *contentItemMetaData in contentItemMetaDataList) {
-		//ContentItem *contentItem = [ContentItem contentItemFromDict:contentItemMetaData];
 		NSString *contentItemArchiveFileName = [contentItemMetaData valueForKey:kCMKeyContentItemArchiveFileName];
 		
 		// check if we should download the archive
 		if ([self shouldDownloadContentItemArchive:contentItemArchiveFileName]) {
-			BOOL downloaded = [self downloadContentItemArchive:contentItemMetaData];
-			if (!downloaded) {
-			}
 			NSString *directoryName = [contentItemMetaData valueForKeyPath:@"contentItemDirectoryName"];
-			[self unpackContentItemArchive:[self contentItemArchiveFilePathFromFileName:contentItemArchiveFileName] toDirectoryPath:[self contentItemDirectoryPathFromContentItemDirectoryName:directoryName]];
+			// download and extract
+			[self downloadContentItemArchive:contentItemMetaData unpackToDirectoryPath:[self contentItemDirectoryPathFromContentItemDirectoryName:directoryName]];
 		}
 	}
 	
 	return NO;
-}
-
-- (BOOL)unpackContentItemArchive:(NSString*)contentItemArchiveFilePath toDirectoryPath:(NSString*)directoryPath {
-	[Utl createDirectoryAtPath:directoryPath];
-
-	ZipArchive *za = [[ZipArchive alloc] init];
-	if ([za UnzipOpenFile:contentItemArchiveFilePath]) {
-		BOOL ret = [za UnzipFileTo:directoryPath overWrite:YES];
-		if (NO == ret){} [za UnzipCloseFile];
-	}
-	[za release];
-	
-	NSString *symbolicLinkPath = [directoryPath stringByAppendingPathComponent:@"support"];
-	NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
-	NSString *symbolicLinkDestinationPath = [NSString stringWithFormat:@"%@/%@", bundlePath, @"www/contentapp"];
-	
-	NSError *err;
-	BOOL symbolicLinkCreated = [[NSFileManager defaultManager] createSymbolicLinkAtPath:symbolicLinkPath withDestinationPath:symbolicLinkDestinationPath error:&err];
-	return YES;
 }
 
 #pragma mark cleanup

@@ -38,27 +38,31 @@ static DownloadManager *defaultDownloadManager = nil;
 	return defaultDownloadManager;
 }
 
-- (BOOL)downloadFileAtURL:(NSURL*)url toDestinationFilePath:(NSString*)destinationFilePath error:(NSError**)err {
-	DownloadItem *downloadItem = [[DownloadItem alloc] initWithURL:url destinationFilePath:destinationFilePath];
-	downloadItem.delegate = self;
-	[downloadItems addObject:downloadItem];
-
-	if (operationQueue == nil) {
-		self.operationQueue = [[NSOperationQueue alloc] init];
-	}
-
+- (BOOL)downloadFileAtURL:(NSURL*)url toDestinationFilePath:(NSString*)destinationFilePath unpackToDirectoryPath:(NSString*)unpackToDirectoryPath error:(NSError**)err {
 	if (downloadItems == nil) {
 		self.downloadItems = [[NSMutableArray alloc] init];
 	}
 	
+	DownloadItem *downloadItem = [[DownloadItem alloc] initWithURL:url destinationFilePath:destinationFilePath unpackToDirectoryPath:unpackToDirectoryPath];
+	downloadItem.delegate = self;	
+	[downloadItems addObject:downloadItem];
+	[downloadItem download:self];
+
+	
+	/*
+	if (operationQueue == nil) {
+		self.operationQueue = [[NSOperationQueue alloc] init];
+	}
 	NSInvocationOperation *op = [[NSInvocationOperation alloc] initWithTarget:downloadItem selector:@selector(download:) object:self];
-								  
 	[operationQueue addOperation:op];
+	[operationQueue setSuspended:NO];
+	*/
 
 	return YES;
 }
 
 - (void)downloadItemDidFinishLoading:(DownloadItem*)downloadItem {
+	[downloadItems removeObject:downloadItem];
 }
 
 - (void)downloadItem:(DownloadItem*)downloadItem didFailWithError:(NSError**)error {

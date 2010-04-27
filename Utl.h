@@ -30,4 +30,8 @@
 
 +(BOOL)isDate:(NSDate*)firstDate onSameDayAsDate:(NSDate*)secondDate;
 
+
++ (NSString*)md5:(NSString*)str;
++ (NSString*)fileMD5:(NSString*)path;
+
 @end

@@ -1,6 +1,17 @@
 {
   "content_item_metadata_list": [
     {
+      "content_item_archive_file_name": "mytest.zip",
+      "archive_file_path": "/Users/brianpfeil/projects/content-client/SampleContent/content_archives/mytest.zip",
+      "content_item_manifest": {
+        "name": "My Test",
+        "contentFileName": "index.html",
+        "description": ""
+      },
+      "md5_hash": "ec73867b9a8e4f680d3f26b512efb91c",
+      "contentItemDirectoryName": "mytest"
+    },
+    {
       "content_item_archive_file_name": "singulair-ar.zip",
       "archive_file_path": "/Users/brianpfeil/projects/content-client/SampleContent/content_archives/singulair-ar.zip",
       "content_item_manifest": {
@@ -8,7 +19,7 @@
         "contentFileName": "index.html",
         "description": ""
       },
-      "md5_hash": "0a9b3d21d9ab9818d16c81e84d2a9a36",
+      "md5_hash": "0934c33ad308fd3c92ca48cb124a99f0",
       "contentItemDirectoryName": "singulair-ar"
     }
   ],

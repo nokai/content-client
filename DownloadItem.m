@@ -7,11 +7,17 @@
 //
 
 #import "DownloadItem.h"
+#import "Utl.h"
+#import "ZipArchive.h"
+
+@interface DownloadItem()
+- (BOOL)unpackArchive:(NSString*)contentItemArchiveFilePath toDirectoryPath:(NSString*)directoryPath;
+@end
 
 
 @implementation DownloadItem
 
-@synthesize delegate, url, destinationFilePath, tempFilePath, suggestedFilename, receivedData, fileHandle;
+@synthesize delegate, url, destinationFilePath, tempFilePath, unpackToDirectoryPath, suggestedFilename, receivedData, fileHandle;
 
 - (id)init {
 	if (self = [super init]) {
@@ -20,11 +26,13 @@
 	return self;
 }
 
-- (id)initWithURL:(NSURL*)_url destinationFilePath:(NSString*)_destinationFilePath {
+- (id)initWithURL:(NSURL*)_url destinationFilePath:(NSString*)_destinationFilePath unpackToDirectoryPath:(NSString*)unpackToDirectoryPath {
 	[self init];
 	self.url = _url;
 	self.destinationFilePath = _destinationFilePath;
+	self.unpackToDirectoryPath = unpackToDirectoryPath;
 	self.tempFilePath = [NSTemporaryDirectory() stringByAppendingPathComponent: [NSString stringWithFormat: @"%.0f.%@", [NSDate timeIntervalSinceReferenceDate] * 1000.0, @"tmp"]];
+	return self;
 }
 
 - (void)download:(id)sender {
@@ -64,19 +72,48 @@
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
 	[fileHandle closeFile];
 	NSError *err;
+	
+	SEL selDownloadItemDidFinishLoading = @selector(downloadItemDidFinishLoading:);
+	SEL selDownloadItemDidFailWithError = @selector(downloadItem:didFailWithError:);	
+	
 	BOOL moveSuccessful = [[NSFileManager defaultManager] moveItemAtPath:tempFilePath toPath:destinationFilePath error:&err];
 	
 	if (moveSuccessful) {
-		SEL sel = @selector(downloadItemDidFinishLoading:);
-		if (delegate && [delegate respondsToSelector:sel]) {
-			[delegate performSelector:sel withObject:self];
+		BOOL unpackSuccessful = [self unpackArchive:destinationFilePath toDirectoryPath:unpackToDirectoryPath];
+		
+		if (unpackSuccessful) {
+			if (delegate && [delegate respondsToSelector:selDownloadItemDidFinishLoading]) {
+				[delegate performSelector:selDownloadItemDidFinishLoading withObject:self];
+				return;
+			}
 		}
-	} else {
-		SEL sel = @selector(downloadItem:didFailWithError:);
-		if (delegate && [delegate respondsToSelector:sel]) {
-			[delegate performSelector:sel withObject:self withObject:nil];
-		}		
+		
 	}
+	
+	// failure case
+	if (delegate && [delegate respondsToSelector:selDownloadItemDidFailWithError]) {
+		[delegate performSelector:selDownloadItemDidFailWithError withObject:self withObject:nil];
+	}		
+
+}
+
+- (BOOL)unpackArchive:(NSString*)contentItemArchiveFilePath toDirectoryPath:(NSString*)directoryPath {
+	[Utl createDirectoryAtPath:directoryPath];
+	
+	ZipArchive *za = [[ZipArchive alloc] init];
+	if ([za UnzipOpenFile:contentItemArchiveFilePath]) {
+		BOOL ret = [za UnzipFileTo:directoryPath overWrite:YES];
+		if (NO == ret){} [za UnzipCloseFile];
+	}
+	[za release];
+	
+	NSString *symbolicLinkPath = [directoryPath stringByAppendingPathComponent:@"support"];
+	NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
+	NSString *symbolicLinkDestinationPath = [NSString stringWithFormat:@"%@/%@", bundlePath, @"www/contentapp"];
+	
+	NSError *err;
+	BOOL symbolicLinkCreated = [[NSFileManager defaultManager] createSymbolicLinkAtPath:symbolicLinkPath withDestinationPath:symbolicLinkDestinationPath error:&err];
+	return YES;
 }
 
 - (void) dealloc {

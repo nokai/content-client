@@ -13,22 +13,23 @@
 	id delegate;
 	NSURL *url;
 	NSString *destinationFilePath;
-
 	NSString *tempFilePath;	
 	NSString *suggestedFilename;
 	NSMutableData *receivedData;
 	NSFileHandle *fileHandle;
+	NSString *unpackToDirectoryPath;	
 }
 
 @property (nonatomic, retain) id delegate;
 @property (nonatomic, retain) NSURL *url;
 @property (nonatomic, copy) NSString *destinationFilePath;
+@property (nonatomic, copy) NSString *unpackToDirectoryPath;
 @property (nonatomic, copy) NSString *tempFilePath;
 @property (nonatomic, copy) NSString *suggestedFilename;
 @property (nonatomic, retain) NSMutableData *receivedData;
 @property (nonatomic, retain) NSFileHandle *fileHandle;
 
-- (id)initWithURL:(NSURL*)_url destinationFilePath:(NSString*)_destinationFilePath;
+- (id)initWithURL:(NSURL*)_url destinationFilePath:(NSString*)_destinationFilePath unpackToDirectoryPath:(NSString*)unpackToDirectoryPath;
 
 - (void)download:(id)sender;
 

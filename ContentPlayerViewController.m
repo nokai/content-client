@@ -9,6 +9,8 @@
 #import "ContentPlayerViewController.h"
 
 @interface ContentPlayerViewController()
+- (void)createGestureRecognizers;
+- (void)toggleToolbarVisibility;
 @end
 
 
@@ -28,14 +30,52 @@
     return self;
 }
 
-/*
+
 // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
 - (void)viewDidLoad {
-    [super viewDidLoad];
+	self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Presentations" style:UIBarButtonItemStylePlain target:self action:@selector(displayContentItemList:)];
+	self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh target:self action:@selector(sync:)];
+	[self createGestureRecognizers];
+	[super viewDidLoad];
 }
-*/
+
+- (void)createGestureRecognizers {
+	UITapGestureRecognizer *singleFingerDoubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleFingerDoubleTap:)];
+    singleFingerDoubleTap.numberOfTapsRequired = 2;
+	singleFingerDoubleTap.delegate = self;
+	
+    [self.view addGestureRecognizer:singleFingerDoubleTap];
+    [singleFingerDoubleTap release];	
+}
+
+- (void)handleSingleFingerDoubleTap:(UIGestureRecognizer *)sender {
+	NSLog(@"handleSingleFingerDoubleTap called");
+	[self toggleToolbarVisibility];
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer*)otherGestureRecognizer {
+	// this is in place as a workaround a bug acknowledged by apple
+	// apple dev forum post: https://devforums.apple.com/message/161990#161990
+    if ([otherGestureRecognizer isKindOfClass:[UITapGestureRecognizer class]] && [[otherGestureRecognizer view] isDescendantOfView:[gestureRecognizer view]]) {
+        return YES;
+    }
+    return NO;	
+}
+
+- (void)toggleToolbarVisibility {
+	[UIView beginAnimations:@"toggleToolbarVisibility" context:nil];
+	self.navigationController.navigationBar.alpha = (self.navigationController.navigationBar.alpha == 1.0) ? 0 : 1;
+	[UIView commitAnimations];
+}
 
 - (IBAction)displayContentItemList:(id)sender {
+	
+	// already displayed, so toggle off
+	if (_contentListPopoverController != nil && _contentListPopoverController.popoverVisible) {
+		[_contentListPopoverController dismissPopoverAnimated:YES];
+		return;
+	}
+	
 	if (_contentListViewController == nil) {
 		_contentListViewController = [[[ContentListViewController alloc] initWithNibName:@"ContentListViewController" bundle:nil] retain];
 		_contentListViewController.contentManifest = contentManager.contentManifest;
@@ -54,7 +94,7 @@
 
 - (void)contentListViewController:(ContentListViewController*)contentListViewController didFinishWithInfo:(NSDictionary*)info {
 	ContentItem *contentItem = [info valueForKey:@"contentItem"];
-	toolBar.hidden = YES;
+	[self toggleToolbarVisibility];
 	[self displayContentItem:contentItem];
 	[_contentListPopoverController dismissPopoverAnimated:YES];
 }
@@ -91,6 +131,7 @@
 }
 
 - (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
+
 }
 
 - (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {

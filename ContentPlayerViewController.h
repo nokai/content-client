@@ -12,7 +12,7 @@
 #import "ContentListViewController.h"
 #import "ContentItem.h"
 
-@interface ContentPlayerViewController : UIViewController<ContentListViewControllerDelegate, UIWebViewDelegate> {
+@interface ContentPlayerViewController : UIViewController<ContentListViewControllerDelegate, UIWebViewDelegate, UIGestureRecognizerDelegate> {
 	UIToolbar *toolBar;
 	ContentWebView *contentWebView;
 	UINavigationController *_contentListNavigationController;
