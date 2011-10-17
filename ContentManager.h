@@ -9,34 +9,46 @@
 #import <Foundation/Foundation.h>
 #import "Reachability.h"
 #import "DownloadManager.h"
+#import "Constants.h"
+#import "ContentItem.h"
+#import "ASIHTTPRequest.h"
 
-static NSString* const kCMDefaultContentServerHostname = @"localhost";
-static NSString* const kCMDefaultContentServerPort = @"8087";
-static NSString* const kCMDefaultContentServerRelativeBasePath = @"content";
-static NSString* const kCMDefaultContentManifestName = @"manifest.json";
-static NSString* const kCMDefaultContentManifestHashFileName = @"manifest.fingerprint";
-static NSString* const kCMBaseContentDirectoryName = @"content";
-static NSString* const kCMDefaultContentArchivesDirectoryName = @"content_archives";
-static NSString* const kCMDefaultContentItemsDirectoryName = @"content_items";
-static NSString* const kCMKeyContentArchivesDirName = @"content_archives_dir_name";
-static NSString* const kCMKeyContentItemMetaDataList = @"content_item_metadata_list";
-static NSString* const kCMKeyContentItemArchiveFileName = @"content_item_archive_file_name";
-static NSString* const kCMKeyContentItems = @"contentItems";
-
+typedef void (^BasicBlock)(void);
+typedef void (^InfoBlock)(NSDictionary *info);
 
 @interface ContentManager : NSObject {
 	NSDictionary *contentManifest;	
 	Reachability *_contentServerReachability;
+    BOOL _syncInProgress;
+    NSMutableArray *_downloadQueue;
 	DownloadManager *downloadManager;
+	ASIHTTPRequest *_activeRequest;
+    int _activeDownloadItemIndex;
+    int _itemsToDownloadInSession;
+	id delegate;
+    
+    InfoBlock syncStartedBlock;
 }
 
+- (void)setSyncStartedBlock:(InfoBlock)aSyncStartedBlock;
+
+@property (nonatomic, retain) id delegate;
 @property (nonatomic, retain) NSDictionary *contentManifest;
 @property (nonatomic, retain) DownloadManager *downloadManager;
 
 + (ContentManager*)defaultContentManager;
 
+- (NSString*)contentItemContentFilePath:(ContentItem*)contentItem;
+
+- (BOOL)deleteAllContent;
 - (BOOL)isLocalContentAvailable;
 - (BOOL)canSync;
 - (BOOL)sync:(NSError**)err;
+- (BOOL)syncInProgress;
+- (void)cancelSync;
+- (int)itemsToDownloadInSession;
+- (int)activeDownloadItemIndex;
+
+- (NSString*)userid;
 
 @end

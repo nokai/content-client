@@ -2,6 +2,8 @@ require 'rubygems'
 require 'rake'
 require 'json/pure'
 
+CONTENT_ITEM_EXCLUDES = ['mytest', 'mytest2']
+
 CONTENT_MANIFEST_FILE_NAME = 'manifest.json'
 CONTENT_MANIFEST_MD5_HASH_FILE_NAME = 'manifest.fingerprint'
 CONTENT_ITEMS_DIR_NAME = 'content_items'
@@ -11,6 +13,7 @@ def md5(file_path)
   %x{md5 "#{file_path}"}.split("=")[1].chomp.gsub(' ', '')
 end
 
+desc 'build archives'
 task :build_archives do
   content_manifest = {}
   
@@ -27,6 +30,7 @@ task :build_archives do
   Dir["#{content_items_dir_path}/*"].each do |path|
     obj = {}
     basename = File.basename(path); obj[:contentItemDirectoryName] = basename;
+    next if CONTENT_ITEM_EXCLUDES.include?(basename)
     content_item_archive_file_name = "#{basename}.zip"; obj[:content_item_archive_file_name] = content_item_archive_file_name;
     archive_file_path = "#{content_archives_dir_path}/#{content_item_archive_file_name}"; obj[:archive_file_path] = archive_file_path;
 
@@ -35,6 +39,7 @@ task :build_archives do
       obj[:content_item_manifest] = JSON.parse(content_item_manifest)
       %x{zip -r "#{archive_file_path}" ./}
       md5_hash = md5(archive_file_path); obj[:md5_hash] = md5_hash
+      obj[:file_size_in_bytes] = "#{File.size(archive_file_path)}"
     end
     content_item_metadata_list << obj
   end

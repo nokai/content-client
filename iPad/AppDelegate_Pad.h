@@ -12,9 +12,5 @@
 @interface AppDelegate_Pad : AppDelegate_Shared {
 }
 
-- (void)run;
-- (void)contentManagerTest;
-- (void)downloadTest;
-
 @end
 

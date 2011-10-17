@@ -10,6 +10,8 @@
 #import "ContentItem.h"
 #import "Utl.h"
 #import "ZipArchive.h"
+#import "Settings.h"
+#import "ASIHTTPRequest.h"
 
 static ContentManager *defaultContentManager = nil;
 
@@ -18,6 +20,7 @@ static ContentManager *defaultContentManager = nil;
 - (NSString*)contentServerBaseURL;
 - (NSString*)contentServerRelativeBasePath;
 - (NSString*)contentServerPort;
+- (BOOL)setup;
 - (BOOL)initDirectoryStructure;
 - (BOOL)loadLocalData;
 - (NSString*)baseContentDirectoryPath;
@@ -27,10 +30,11 @@ static ContentManager *defaultContentManager = nil;
 - (BOOL)contentItemArchiveFileExists:(NSString*)contentItemArchiveFileName;
 - (NSArray*)contentItemDirectoryNames;
 - (NSDictionary*)downloadContentManifest;
+- (void)downloadNextContentItem;
+- (BOOL)unpackArchive:(NSString*)contentItemArchiveFilePath toDirectoryPath:(NSString*)directoryPath;
 - (NSDictionary*)localContentManifest;
 - (BOOL)shouldDownloadContentItemArchive:(NSString*)contentItemArchiveFileName;
 - (BOOL)isConnected;
-- (BOOL)downloadContentItemArchive:(NSDictionary*)contentItemMetaData;
 - (NSString*)contentManifestFilePath;
 - (NSString*)contentManifesFileContents;
 - (NSString*)contentManifestHashFilePath;
@@ -40,20 +44,28 @@ static ContentManager *defaultContentManager = nil;
 
 @implementation ContentManager
 
-@synthesize downloadManager, contentManifest;
+@synthesize delegate, downloadManager, contentManifest;
 
 #pragma mark inits
 
 - (id)init {
 	if ([super init]) {
 		// init code here
+		delegate = nil;
 		contentManifest = nil;
 		_contentServerReachability = nil;
+        _syncInProgress = NO;
+        _downloadQueue = nil;
 		downloadManager = nil;
-		[self initDirectoryStructure];
-		[self loadLocalData];
+        _itemsToDownloadInSession = 0;
+        _activeRequest = nil;
+		[self setup];
 	}
 	return self;
+}
+
+- (BOOL)setup {
+    return [self initDirectoryStructure] && [self loadLocalData];
 }
 
 - (BOOL)initDirectoryStructure {
@@ -83,42 +95,47 @@ static ContentManager *defaultContentManager = nil;
 #pragma mark server variables
 
 - (NSString*)contentServerHostname {
-	return kCMDefaultContentServerHostname;
+	//return kCMDefaultContentServerHostname;
+    return [Settings stringForKeyPath:@"contentServer.hostName"];
 }
 
 - (NSString*)contentServerPort {
-	return kCMDefaultContentServerPort;
+    return [Settings stringForKeyPath:@"contentServer.port"];
 }
 
 - (NSString*)contentServerRelativeBasePath {
-	return kCMDefaultContentServerRelativeBasePath;
+	return [Settings stringForKeyPath:@"contentServer.relativeBasePath"];
 }
 
 - (NSString*)contentServerBaseURL {
-	return [NSString stringWithFormat:@"http://%@:%@/%@", [self contentServerHostname], [self contentServerPort], [self contentServerRelativeBasePath]];
+	return [NSString stringWithFormat:@"%@://%@:%@/%@",
+            [Settings stringForKeyPath:@"contentServer.scheme"],
+            [self contentServerHostname],
+            [self contentServerPort],
+            [self contentServerRelativeBasePath]];
 }
 
 #pragma mark paths
 
 - (NSString*)baseContentDirectoryPath {
 	NSString *applicationDocumentsDirectory = [Utl applicationDocumentsDirectory];
-	return [applicationDocumentsDirectory stringByAppendingPathComponent:kCMBaseContentDirectoryName];
+	return [applicationDocumentsDirectory stringByAppendingPathComponent:[Settings stringForKeyPath:@"contentServer.contentDirectoryName"]];
 }
 
 - (NSString*)contentArchiveDirectoryPath {
-	return [[self baseContentDirectoryPath] stringByAppendingPathComponent:kCMDefaultContentArchivesDirectoryName];
+	return [[self baseContentDirectoryPath] stringByAppendingPathComponent:[Settings stringForKeyPath:@"contentServer.contentArchivesDirectoryName"]];
 }
 
 - (NSString*)contentDirectoryPath {
-	return [[self baseContentDirectoryPath] stringByAppendingPathComponent:kCMDefaultContentItemsDirectoryName];	
+	return [[self baseContentDirectoryPath] stringByAppendingPathComponent:[Settings stringForKeyPath:@"contentServer.ContentItemsDirectoryName"]];	
 }
 
 - (NSString*)contentManifestFilePath {
-	return [[self baseContentDirectoryPath] stringByAppendingPathComponent:kCMDefaultContentManifestName];
+	return [[self baseContentDirectoryPath] stringByAppendingPathComponent:[Settings stringForKeyPath:@"contentServer.manifestName"]];
 }
 
 - (NSString*)contentManifestHashFileName {
-	return kCMDefaultContentManifestHashFileName;
+	return [Settings stringForKeyPath:@"contentServer.manifestHashFileName"];
 }
 
 - (NSString*)contentItemArchiveFilePathFromFileName:(NSString*)contentItemArchiveFileName {
@@ -139,6 +156,10 @@ static ContentManager *defaultContentManager = nil;
 	NSString *contentFileName = [contentItem contentFileName];
 	NSString *contentItemDirectoryPath = [self contentItemDirectoryPathFromContentItemDirectoryName:[contentItem contentItemDirectoryName]];
 	return [NSString stringWithFormat:@"%@/%@", contentItemDirectoryPath, contentFileName];
+}
+
+- (NSString*)completedContentItemsFilePath {
+    return [[self baseContentDirectoryPath] stringByAppendingPathComponent:@"completedContentItems.json"];
 }
 
 #pragma mark accessors
@@ -237,23 +258,126 @@ static ContentManager *defaultContentManager = nil;
 
 #pragma mark actions
 
-- (NSDictionary*)downloadContentManifest {
-	NSString *contentManifestURL = [NSString stringWithFormat:@"%@/%@", [self contentServerBaseURL], kCMDefaultContentManifestName];
-	NSError *err;	
-	NSString *_contentManifest = [NSString stringWithContentsOfURL:[NSURL URLWithString:contentManifestURL] encoding:NSUTF8StringEncoding error:&err];
-
-	// save manifest locally
-	NSError *err2;
-	[_contentManifest writeToFile:[self contentManifestFilePath] atomically:NO encoding:NSUTF8StringEncoding error:&err2];
-	[self loadLocalData];
-	
-	return [_contentManifest JSONValue];
+- (BOOL)deleteAllContent {
+    NSString *directoryPath = [self baseContentDirectoryPath];
+    DLog(@"deleting all local content from %@", directoryPath);
+	BOOL success = [Utl deleteFile:directoryPath];
+    
+    // clear completedContentItemHashes
+    [[DataMgr app] setValue:[NSArray array] forKeyPath:@"completedContentItemHashes"];
+    
+	if (success) {
+		success = [self setup];
+	} else {
+        //TODO: error code here
+    }
+    return success;
 }
 
+- (void)cancelSync {
+    if (_activeRequest) {
+        [_activeRequest clearDelegatesAndCancel];
+    }
+}
+
+- (BOOL)sync:(NSError**)err {
+    
+    if (_syncInProgress) {
+        return YES;
+    }
+	
+	@synchronized(self) {
+        
+        _syncInProgress = YES;
+        
+		// check connectivity
+		if (![self isConnected]) {
+            DLog(@"can't reach server");
+			if (*err) {
+				*err = nil;
+			}
+            _syncInProgress = NO;
+			return NO;
+		}
+        
+        SEL selBeginContentUpdateCheck = @selector(contentManager:beginContentUpdateCheckWithInfo:);
+        if (delegate != nil && [delegate respondsToSelector:selBeginContentUpdateCheck]) {
+            [delegate performSelector:selBeginContentUpdateCheck withObject:self withObject:nil];
+        }
+        
+        BOOL remoteContentManifestHashFileChanged;
+        
+        // get the latest content manifest from server
+        BOOL updateSuccess = [self updateContentManifestHashFile:&remoteContentManifestHashFileChanged];
+        
+        if (!updateSuccess) {
+            DLog(@"Failed to get updated content manifest file");
+            //*err = [NSError errorWithDomain:<#(NSString *)domain#> code:<#(NSInteger)code#> userInfo:<#(NSDictionary *)dict#> 
+            _syncInProgress = NO;
+            return NO;
+        }
+        
+        // content hasn't changed
+        if (updateSuccess && !remoteContentManifestHashFileChanged) {
+            DLog(@"No content changes on server");
+            _syncInProgress = NO;
+            return YES;
+        }
+        
+        // content has changed
+        if (updateSuccess && remoteContentManifestHashFileChanged) {
+            DLog(@"Server content manifest has changed");
+            if ([self isConnected]) {		
+                [self downloadContentManifest];
+            }
+        }
+        
+        // build the download queue
+        if (!_downloadQueue) {
+            _downloadQueue = [[NSMutableArray alloc] init];
+        } else  {
+            [_downloadQueue removeAllObjects];
+        }
+
+        NSArray *contentItemMetaDataList = [contentManifest valueForKey:kCMKeyContentItemMetaDataList];
+        for (NSDictionary *contentItemMetaData in contentItemMetaDataList) {
+            NSString *contentItemArchiveFileName = [contentItemMetaData valueForKey:kCMKeyContentItemArchiveFileName];
+            
+            if(![self isContentItemComplete:[contentItemMetaData valueForKey:@"md5_hash"]]) {
+                [_downloadQueue addObject:contentItemMetaData];
+            }
+            
+        }
+        
+        _activeDownloadItemIndex = 0;
+        _itemsToDownloadInSession = (_downloadQueue != nil) ? [_downloadQueue count] : 0;
+        
+        // start downloads
+        [self downloadNextContentItem];
+
+	}
+	
+	return YES;
+}
+
+- (BOOL)syncInProgress {
+    return _syncInProgress;
+}
+
+- (int)itemsToDownloadInSession {
+    return _itemsToDownloadInSession;
+}
+
+- (int)activeDownloadItemIndex {
+    return _activeDownloadItemIndex;
+}
+
+
 - (BOOL)updateContentManifestHashFile:(BOOL*)changed {
-	NSString *contentManifestHashFileURLString = [NSString stringWithFormat:@"%@/%@", [self contentServerBaseURL], [self contentManifestHashFileName]];
+	NSString *contentManifestHashFileURLString = [NSString stringWithFormat:@"%@/%@?userid=%@", [self contentServerBaseURL], [self contentManifestHashFileName], [self userid]];
 	NSURL *contentManifestHashFileURL = [NSURL URLWithString:contentManifestHashFileURLString];
 	NSError *err;
+    DLog(@"Downloading content manifest hash file");
 	NSString *remoteContentManifestHashFileContents = [NSString stringWithContentsOfURL:contentManifestHashFileURL encoding:NSUTF8StringEncoding error:&err];
 	NSString *localContentManifestHashFileContents = [self contentManifestHashFileContents];
 	if (![remoteContentManifestHashFileContents isEqualToString:localContentManifestHashFileContents]) {
@@ -266,22 +390,111 @@ static ContentManager *defaultContentManager = nil;
 	return YES;
 }
 
+- (NSDictionary*)downloadContentManifest {
+	NSString *contentManifestURL = [NSString stringWithFormat:@"%@/%@", [self contentServerBaseURL], kCMDefaultContentManifestName];
+    NSString *localContentManifestFilePath = [self contentManifestFilePath];
+    
+    // save manifest locally
+    DLog(@"Downloading content manifest from %@ and saving locally to ", contentManifestURL, localContentManifestFilePath);
+    ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:[NSURL URLWithString:contentManifestURL]];
+    [request setDownloadDestinationPath:localContentManifestFilePath];
+    [request startSynchronous];
+
+	NSError *err;
+    NSString *localContentManifestContents = [NSString stringWithContentsOfFile:localContentManifestFilePath encoding:NSUTF8StringEncoding error:&err];
+    
+	[self loadLocalData];
+	
+	return [localContentManifestContents JSONValue];
+}
+
 - (BOOL)downloadContentItemArchive:(NSDictionary*)contentItemMetaData unpackToDirectoryPath:(NSString*)unpackToDirectoryPath {
 	NSString *contentItemArchiveFileName = [contentItemMetaData valueForKey:kCMKeyContentItemArchiveFileName];
 	NSString *contentArchivesDirName = [contentManifest valueForKey:kCMKeyContentArchivesDirName];
 	NSString *contentItemArchiveURLString = [NSString stringWithFormat:@"%@/%@/%@", [self contentServerBaseURL], contentArchivesDirName, contentItemArchiveFileName];
 	NSURL *contentItemArchiveURL = [NSURL URLWithString:contentItemArchiveURLString];
-	NSData *contentItemArchiveData = [NSData dataWithContentsOfURL:contentItemArchiveURL];
+	//NSData *contentItemArchiveData = [NSData dataWithContentsOfURL:contentItemArchiveURL];
 	NSString *contentItemArchiveFilePath = [[self contentArchiveDirectoryPath] stringByAppendingPathComponent:contentItemArchiveFileName];
 	
-	if (downloadManager == nil) {
-		self.downloadManager = [[DownloadManager alloc] init];
-		downloadManager.delegate = self;
-	}
-	
-	
-	NSError *err;
-	[downloadManager downloadFileAtURL:contentItemArchiveURL toDestinationFilePath:contentItemArchiveFilePath unpackToDirectoryPath:(NSString*)unpackToDirectoryPath error:&err];
+    NSString *cacheDirectoryPath = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject];
+    NSString *contentItemHash = [contentItemMetaData valueForKey:@"md5_hash"];
+    NSString *temporaryFileDownloadPath = [cacheDirectoryPath stringByAppendingPathComponent:contentItemHash];
+    
+    //NSString *directoryName = [contentItemMetaData valueForKeyPath:@"contentItemDirectoryName"];
+    NSString *directoryName = [contentItemMetaData valueForKeyPath:@"md5_hash"];
+    NSString *contentItemDirectoryPath = [self contentItemDirectoryPathFromContentItemDirectoryName:directoryName];
+    
+    DLog(@"temporaryFileDownloadPath = %@", temporaryFileDownloadPath);
+    DLog(@"DownloadDestinationPath = %@", contentItemArchiveFilePath);
+    
+    __block ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:contentItemArchiveURL];
+    request.downloadProgressDelegate = self;
+    request.showAccurateProgress = YES;
+    [request setDownloadDestinationPath:contentItemArchiveFilePath];
+    [request setTemporaryFileDownloadPath:temporaryFileDownloadPath];
+    [request setAllowResumeForFileDownloads:YES];
+    
+    [request setStartedBlock:^{
+        // notify download started
+        SEL selStart = @selector(contentManagerDidStartContentItemDownload:withContentItemMetaData:);
+        if (delegate != nil && [delegate respondsToSelector:selStart]) {
+            [delegate performSelector:selStart withObject:self withObject:contentItemMetaData];
+        }
+    }];
+    
+    [request setCompletionBlock:^{
+        
+        dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT , 0);
+        dispatch_async(queue, ^{
+            BOOL unpackSuccessful = [self unpackArchive:contentItemArchiveFilePath toDirectoryPath:contentItemDirectoryPath];
+            
+            if (unpackSuccessful) {
+                // remove archive file
+                [[NSFileManager defaultManager] removeItemAtPath:contentItemArchiveFilePath error:nil];
+                [self setContentItemComplete:contentItemHash];
+                dispatch_sync(dispatch_get_main_queue(), ^{
+                    // notify download finished				
+                    SEL selFinish = @selector(contentManagerDidFinishContentItemDownload:withContentItemMetaData:);
+                    if (delegate != nil && [delegate respondsToSelector:selFinish]) {
+                        [delegate performSelector:selFinish withObject:self withObject:contentItemMetaData];
+                    }
+                    
+                    // download next content item
+                    [_downloadQueue removeObjectAtIndex:0];
+                    [self downloadNextContentItem];
+                });
+            }
+        });
+
+        
+    }];
+    
+    [request setFailedBlock:^{
+        DLog(@"download failed for %@", request.url);
+        _syncInProgress = NO;
+        SEL selRequestFailed = @selector(contentManager:requestFailedWithInfo:);
+        if (delegate != nil && [delegate respondsToSelector:selRequestFailed]) {
+            [delegate performSelector:selRequestFailed withObject:self withObject:request];
+        }
+        
+    }];
+    
+    [request setBytesReceivedBlock:^(unsigned long long size, unsigned long long total) {
+        DLog(@"setBytesReceivedBlock(size=%d,total=%d)", size, total);
+    }];
+    
+    _activeRequest = request;
+    [request startAsynchronous];
+    
+    
+//	if (downloadManager == nil) {
+//		self.downloadManager = [[DownloadManager alloc] init];
+//		downloadManager.delegate = self;
+//	}
+//	
+//	
+//	NSError *err;
+	//[downloadManager downloadFileAtURL:contentItemArchiveURL toDestinationFilePath:contentItemArchiveFilePath unpackToDirectoryPath:(NSString*)unpackToDirectoryPath error:&err];
 	
 	
 	//BOOL createdFile = [[NSFileManager defaultManager] createFileAtPath:contentItemArchiveFilePath contents:contentItemArchiveData attributes:nil];
@@ -307,56 +520,101 @@ static ContentManager *defaultContentManager = nil;
 	
 }
 
-- (BOOL)sync:(NSError**)err {
-	
-	// check connectivity
-	if (![self isConnected]) {
-		if (*err) {
-			*err = nil;
-		}
-		return NO;
-	}	
-	
-	BOOL remoteContentManifestHashFileChanged;
-	
-	// get the latest content manifest from server
-	BOOL updateSuccess = [self updateContentManifestHashFile:&remoteContentManifestHashFileChanged];
-	
-	if (!updateSuccess) {
-		//*err = [NSError errorWithDomain:<#(NSString *)domain#> code:<#(NSInteger)code#> userInfo:<#(NSDictionary *)dict#> 
-		return NO;
-	}
-	
-	// content hasn't changed
-	if (updateSuccess && !remoteContentManifestHashFileChanged) {
-		return YES;
-	}
-	
-	// content has changed
-	if (updateSuccess && remoteContentManifestHashFileChanged) {
-		if ([self isConnected]) {		
-			[self downloadContentManifest];
-		}
-	}
-	
-	NSArray *contentItemMetaDataList = [contentManifest valueForKey:kCMKeyContentItemMetaDataList];
-	for (NSDictionary *contentItemMetaData in contentItemMetaDataList) {
-		NSString *contentItemArchiveFileName = [contentItemMetaData valueForKey:kCMKeyContentItemArchiveFileName];
-		
-		// check if we should download the archive
-		if ([self shouldDownloadContentItemArchive:contentItemArchiveFileName]) {
-			NSString *directoryName = [contentItemMetaData valueForKeyPath:@"contentItemDirectoryName"];
-			// download and extract
-			[self downloadContentItemArchive:contentItemMetaData unpackToDirectoryPath:[self contentItemDirectoryPathFromContentItemDirectoryName:directoryName]];
-		}
-	}
-	
-	return NO;
+- (void)setContentItemComplete:(NSString*)hash {
+    DLog(@"adding hash to completedContentItemHashes");
+    NSArray *completedContentItemHashes = [[DataMgr app] valueForKeyPath:@"completedContentItemHashes"];
+    
+    if (completedContentItemHashes == nil) {
+        completedContentItemHashes = [NSArray arrayWithObject:hash];
+    } else {
+        completedContentItemHashes = [completedContentItemHashes arrayByAddingObject:hash];
+    }
+    [[DataMgr app] setValue:completedContentItemHashes forKeyPath:@"completedContentItemHashes"];
 }
+
+- (BOOL)isContentItemComplete:(NSString*)hash {
+    NSArray *completedContentItemHashes = [[DataMgr app] valueForKeyPath:@"completedContentItemHashes"];
+    return [completedContentItemHashes containsObject:hash];
+}
+
+- (void)setProgress:(float)newProgress {
+    DLog(@"newProgress = %f", newProgress);
+    SEL selProgress = @selector(contentManager:progressUpdateWithInfo:);
+    if (delegate != nil && [delegate respondsToSelector:selProgress]) {
+        NSDictionary *contentItemMetaData = [_downloadQueue objectAtIndex:0];
+        
+        NSDictionary *info = [NSDictionary dictionaryWithObjectsAndKeys:contentItemMetaData, @"contentItemMetaData",
+                              [NSNumber numberWithFloat:newProgress], @"progress", nil];
+        
+        [delegate performSelector:selProgress withObject:self withObject:info];
+    }
+}
+
+- (BOOL)unpackArchive:(NSString*)contentItemArchiveFilePath toDirectoryPath:(NSString*)directoryPath {
+    DLog(@"extracting archive file %@ to directory %@", contentItemArchiveFilePath, directoryPath);
+	[Utl createDirectoryAtPath:directoryPath];
+	
+	ZipArchive *za = [[ZipArchive alloc] init];
+	if ([za UnzipOpenFile:contentItemArchiveFilePath]) {
+		BOOL ret = [za UnzipFileTo:directoryPath overWrite:YES];
+		if (NO == ret){} [za UnzipCloseFile];
+	}
+	[za release];
+	
+	NSString *symbolicLinkPath = [directoryPath stringByAppendingPathComponent:@"support"];
+	NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
+	NSString *symbolicLinkDestinationPath = [NSString stringWithFormat:@"%@/%@", bundlePath, @"www/contentapp"];
+	
+	NSError *err;
+	BOOL symbolicLinkCreated = [[NSFileManager defaultManager] createSymbolicLinkAtPath:symbolicLinkPath withDestinationPath:symbolicLinkDestinationPath error:&err];
+	if (symbolicLinkCreated) {
+		;
+	}
+	return YES;
+}
+
+- (void)downloadNextContentItem {
+    
+    // nothing left to download
+    if ((_downloadQueue == nil) || ([_downloadQueue count] == 0)) {
+        _syncInProgress = NO;
+		SEL sel = @selector(contentManagerDidFinishSyncing:);
+		if (delegate != nil && [delegate respondsToSelector:sel]) {
+			[delegate performSelector:sel withObject:self];
+		}
+        return;
+    }
+    
+    if (_activeDownloadItemIndex == 0) {
+        _activeDownloadItemIndex = 1;
+    } else {
+        _activeDownloadItemIndex++;
+    }
+    
+    NSDictionary *contentItemMetaData = [_downloadQueue objectAtIndex:0];
+    NSString *directoryName = [contentItemMetaData valueForKeyPath:@"contentItemDirectoryName"];
+
+    // download and extract				
+    [self downloadContentItemArchive:contentItemMetaData unpackToDirectoryPath:[self contentItemDirectoryPathFromContentItemDirectoryName:directoryName]];				
+}
+
+- (NSString*)userid {
+	return [[UIDevice currentDevice] uniqueIdentifier];
+}
+
+#pragma mark -
+#pragma mark blocks
+
+- (void)setSyncStartedBlock:(InfoBlock)aSyncStartedBlock {
+	[syncStartedBlock release];
+	syncStartedBlock = [aSyncStartedBlock copy];
+}
+
 
 #pragma mark cleanup
 
 - (void)dealloc {
+	[delegate release];
 	[contentManifest release];
 	[_contentServerReachability release];
 	[downloadManager release];

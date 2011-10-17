@@ -16,16 +16,12 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
 	
-    // Override point for customization after application launch
-	[self displayContentPlayer];	
+	if (contentPlayerViewController == nil) {
+		self.contentPlayerViewController = [[ContentPlayerViewController alloc] initWithNibName:@"ContentPlayerViewController" bundle:nil];
+	}
+    
+	[window addSubview:contentPlayerViewController.view];
     [window makeKeyAndVisible];
-	/*
-	[window setNeedsLayout];	
-	[window setNeedsDisplay];
-	UIView *view = [window.subviews objectAtIndex:0];
-	[view setNeedsDisplay];
-	[view setNeedsLayout];
-	*/
 	
 	return YES;
 }

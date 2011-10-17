@@ -15,10 +15,11 @@
 
 + (ContentItem*)contentItemFromDict:(NSDictionary*)dict;
 
-- (id)initWithBaseDirectoryPath:(NSString*)baseDirectoryPath;
-
 - (NSString*)name;
+- (NSString*)contentItemDescription;
 - (NSString*)contentFileName;
 - (NSString*)contentItemDirectoryName;
+
+- (BOOL)isAvailableForDisplay;
 
 @end

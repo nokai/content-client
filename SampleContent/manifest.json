@@ -1,27 +1,53 @@
 {
+  "content_archives_dir_name": "content_archives",
   "content_item_metadata_list": [
     {
-      "content_item_archive_file_name": "mytest.zip",
-      "archive_file_path": "/Users/brianpfeil/projects/content-client/SampleContent/content_archives/mytest.zip",
+      "file_size_in_bytes": "1472960",
+      "content_item_archive_file_name": "antiretroviral-drug-resistance-reprint.zip",
+      "archive_file_path": "/Users/brianpfeil/projects/content-client/SampleContent/content_archives/antiretroviral-drug-resistance-reprint.zip",
       "content_item_manifest": {
-        "name": "My Test",
-        "contentFileName": "index.html",
-        "description": ""
+        "name": "Antiretroviral Drug Resistance",
+        "contentFileName": "reprint.pdf",
+        "description": "Antiretroviral Drug Resistance Reprintz"
       },
-      "md5_hash": "ec73867b9a8e4f680d3f26b512efb91c",
-      "contentItemDirectoryName": "mytest"
+      "md5_hash": "91015135ba6f8bc99d2385e25296c468",
+      "contentItemDirectoryName": "antiretroviral-drug-resistance-reprint"
     },
     {
+      "file_size_in_bytes": "41209",
+      "content_item_archive_file_name": "aracid-presentation.zip",
+      "archive_file_path": "/Users/brianpfeil/projects/content-client/SampleContent/content_archives/aracid-presentation.zip",
+      "content_item_manifest": {
+        "name": "Aracid Presentation",
+        "contentFileName": "presentation.ppt",
+        "description": "Aggregate Aracid Presentation"
+      },
+      "md5_hash": "331b804eddc9728bf6afbe56db6ebfd5",
+      "contentItemDirectoryName": "aracid-presentation"
+    },
+    {
+      "file_size_in_bytes": "20506460",
       "content_item_archive_file_name": "singulair-ar.zip",
       "archive_file_path": "/Users/brianpfeil/projects/content-client/SampleContent/content_archives/singulair-ar.zip",
       "content_item_manifest": {
         "name": "Singulair AR",
         "contentFileName": "index.html",
-        "description": ""
+        "description": "SIngulair AR Video"
       },
-      "md5_hash": "0934c33ad308fd3c92ca48cb124a99f0",
+      "md5_hash": "27e733f7ebc956091d0d553aa6c5adbe",
       "contentItemDirectoryName": "singulair-ar"
+    },
+    {
+      "file_size_in_bytes": "20504970",
+      "content_item_archive_file_name": "video-test.zip",
+      "archive_file_path": "/Users/brianpfeil/projects/content-client/SampleContent/content_archives/video-test.zip",
+      "content_item_manifest": {
+        "name": "video-test",
+        "contentFileName": "video.m4v",
+        "description": "video-test"
+      },
+      "md5_hash": "da5fd93efde6f78aa203ddf5ae791fe2",
+      "contentItemDirectoryName": "video-test"
     }
-  ],
-  "content_archives_dir_name": "content_archives"
+  ]
 }

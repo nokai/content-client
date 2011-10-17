@@ -13,4 +13,9 @@
 
 }
 
+- (void)orientationChanged;
+
+- (void)setContentData:(id)data;
+- (id)getContentData;
+
 @end

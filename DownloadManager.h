@@ -21,6 +21,6 @@
 
 + (DownloadManager*)defaultDownloadManager;
 
-- (BOOL)downloadFileAtURL:(NSURL*)url toDestinationFilePath:(NSString*)destinationFilePath error:(NSError**)err;
+- (BOOL)downloadFileAtURL:(NSURL*)url toDestinationFilePath:(NSString*)destinationFilePath unpackToDirectoryPath:(NSString*)unpackToDirectoryPath error:(NSError**)err;
 
 @end

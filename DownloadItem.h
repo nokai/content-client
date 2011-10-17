@@ -29,7 +29,7 @@
 @property (nonatomic, retain) NSMutableData *receivedData;
 @property (nonatomic, retain) NSFileHandle *fileHandle;
 
-- (id)initWithURL:(NSURL*)_url destinationFilePath:(NSString*)_destinationFilePath unpackToDirectoryPath:(NSString*)unpackToDirectoryPath;
+- (id)initWithURL:(NSURL*)_url destinationFilePath:(NSString*)_destinationFilePath unpackToDirectoryPath:(NSString*)_unpackToDirectoryPath;
 
 - (void)download:(id)sender;
 

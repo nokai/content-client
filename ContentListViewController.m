@@ -8,6 +8,7 @@
 
 #import "ContentListViewController.h"
 #import "ContentItem.h"
+#import "Constants.h"
 
 @interface ContentListViewController()
 @end
@@ -15,6 +16,7 @@
 
 @implementation ContentListViewController
 
+@synthesize contentManager;
 @synthesize contentManifest;
 @synthesize delegate;
 
@@ -32,11 +34,12 @@
 	self.title = @"Presentations";
 }
 
-/*
+
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    [self reload];
 }
-*/
+
 /*
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
@@ -62,7 +65,19 @@
 
 - (NSArray*)contentItemList {
 	//TODO: change hard coded string to constant
-	return [contentManifest valueForKey:@"content_item_metadata_list"];
+	NSMutableArray *availableItemsForDisplay = [[NSMutableArray alloc] init];
+	NSArray *contentItemMetadataList = [contentManager.contentManifest valueForKey:kCMKeyContentItemMetaDataList];
+	for (NSDictionary *dict in contentItemMetadataList) {
+		ContentItem *contentItem = [ContentItem contentItemFromDict:dict];
+		if ([contentItem isAvailableForDisplay]) {
+			[availableItemsForDisplay addObject:contentItem];
+		}
+	}
+	return availableItemsForDisplay;
+}
+
+- (void)reload {
+	[self.tableView reloadData];
 }
 
 #pragma mark -
@@ -93,14 +108,12 @@
     
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
     if (cell == nil) {
-        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
+        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:CellIdentifier] autorelease];
     }
 	
-	//ContentItem *contentItem = [[self contentItemList] objectAtIndex:indexPath.row];
-	NSDictionary *dict = [[self contentItemList] objectAtIndex:indexPath.row];
-	ContentItem *contentItem = [ContentItem contentItemFromDict:dict];
-    
+	ContentItem *contentItem = [[self contentItemList] objectAtIndex:indexPath.row];
     cell.textLabel.text = [contentItem name];
+	cell.detailTextLabel.text = [contentItem contentItemDescription];
     
     return cell;
 }
@@ -150,8 +163,7 @@
 #pragma mark Table view delegate
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-	NSDictionary *dict = [[self contentItemList] objectAtIndex:indexPath.row];
-	ContentItem *contentItem = [[ContentItem contentItemFromDict:dict] retain];
+	ContentItem *contentItem = [[self contentItemList] objectAtIndex:indexPath.row];
 	NSDictionary *info = [NSDictionary dictionaryWithObjectsAndKeys:contentItem, @"contentItem", nil];
 	
 	if (self.delegate) {

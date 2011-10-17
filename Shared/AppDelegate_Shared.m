@@ -8,90 +8,17 @@
 
 #import "AppDelegate_Shared.h"
 #import "JSON.h"
-#import "WebViewController.h"
+//#import "WebViewController.h"
 #import "ZipArchive.h"
 #import "ContentManager.h"
 
 @interface AppDelegate_Shared()
-- (IBAction)loadWebContent;
-- (void)downloadTest;
 @end
 
 
 @implementation AppDelegate_Shared
 
 @synthesize window, navigationController, contentPlayerViewController, webView;
-
-- (void)displayContentPlayer {
-	
-	//TODO: Remove this
-	// wipe out all content
-	NSError *err;
-	BOOL success = [[NSFileManager defaultManager] removeItemAtPath:[self applicationDocumentsDirectory] error:&err];
-	if (!success) {
-		//TODO: error code here
-	}
-	
-	if (contentPlayerViewController == nil) {
-		self.contentPlayerViewController = [[ContentPlayerViewController alloc] initWithNibName:@"ContentPlayerViewController" bundle:nil];
-		contentPlayerViewController.title = @"Content Player";
-		ContentManager *defaultContentManager = [ContentManager defaultContentManager];
-		NSError *err;
-		[defaultContentManager sync:&err];
-		contentPlayerViewController.contentManager = defaultContentManager;
-	}
-	
-	self.navigationController = [[UINavigationController alloc] initWithRootViewController:contentPlayerViewController];
-	
-	[window addSubview:navigationController.view];
-}
-
-
-- (IBAction)loadWebContent {
-	
-	[self downloadTest];
-	
-	//NSData *contents = [NSData dataWithContentsOfURL:[NSURL URLWithString:@"http://localhost/video.m4v"]];
-	//NSString *documentsDir = [self applicationDocumentsDirectory];
-	//NSString *tempFilePath = [documentsDir stringByAppendingPathComponent:@"a.m4v"];
-	//BOOL exists = [[NSFileManager defaultManager] fileExistsAtPath:documentsDir];
-	//[[NSFileManager defaultManager] createFileAtPath:tempFilePath contents:contents attributes:nil];
-	NSBundle *bundle = [NSBundle mainBundle];
-	NSString *bundlePath = [bundle bundlePath];
-	NSString *indexPath = [bundlePath stringByAppendingPathComponent:@"index.html"];
-	//[webView loadHTMLString:@"<html style='width: 100%; height: 100%; margin: 0'><body style='width: 100%; height: 100%; margin: 0'><video src='video.m4v' autoplay='true' controls='true' width='768' height='1024'>Pathophysiology of allergic rhinitis</video></body></html>" baseURL:[NSURL fileURLWithPath:bundlePath]];
-	//NSString *videoPath = [bundlePath stringByAppendingPathComponent:@"video.m4v"];
-	//[webView loadRequest:[NSURLRequest requestWithURL:[NSURL fileURLWithPath:videoPath]]];
-	//[webView loadData:[NSData dataWithContentsOfFile:videoPath] MIMEType:@"video/mp4" textEncodingName:@"utf-8" baseURL:[NSURL URLWithString:bundlePath]];
-	
-	//[mpvc retain];
-	
-	//MPMoviePlayerViewController *mpvc = [[MPMoviePlayerViewController alloc] initWithContentURL:[NSURL fileURLWithPath:videoPath]];
-	WebViewController *wvc = [[WebViewController alloc] initWithNibName:@"WebViewController" bundle:nil];
-	[window addSubview:wvc.view];
-	[wvc.webView loadRequest:[NSURLRequest requestWithURL:[NSURL fileURLWithPath:indexPath]]];
-	//[wvc.webView loadHTMLString:@"<html style='margin: 0; width: 100%; height: 100%;'><body onorientationchange=\"alert('hello'); \" style='margin: 0; width: 100%; height: 100%;'><video src='video.m4v' autoplay='true' controls='true' width='768' height='1004'>Pathophysiology of allergic rhinitis</video></body></html>" baseURL:[NSURL fileURLWithPath:bundlePath]];
-	// var e = document.getElementsByTagName('video')[0]; e.videoWidth = (e.videoWidth == 768) ? 1004 : 768; e.videoHeight = (e.videoHeight == 768) ? 1004 : 768;
-	//[wvc presentModalViewController:mpvc animated:YES];
-	
-	//[window addSubview:mpvc.view];
-	//[mpvc.moviePlayer 
-}
-
-- (void)downloadTest {
-	NSString *urlString = @"http://localhost:8088/ZipArchive.zip";
-	NSURLRequest *theRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:urlString]
-												cachePolicy:NSURLRequestUseProtocolCachePolicy
-											timeoutInterval:60.0];
-	
-    // Create the connection with the request and start loading the data.
-	NSURLConnection  *urlConnection = [[NSURLConnection alloc] initWithRequest:theRequest
-																delegate:self];
-	
-	if (urlConnection) {
-		receivedData = [[NSMutableData data] retain];
-	}
-}
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
 	suggestedFilename = [[response suggestedFilename] retain];

@@ -38,8 +38,6 @@
 @property (nonatomic, retain) IBOutlet UIWebView *webView;
 
 - (NSString *)applicationDocumentsDirectory;
-- (void)displayContentPlayer;
-- (IBAction)loadWebContent;
 
 @end
 

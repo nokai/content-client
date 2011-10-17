@@ -1,64 +1,15 @@
 <!DOCTYPE html>
 <html style='margin: 0; width: 100%; height: 100%;'>
 	<head>
-		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript" charset="utf-8"></script>		
-		<script src="support/javascripts/application.js" type="text/javascript" charset="utf-8"></script>
-
-		<script type="text/javascript">
-		
-		jQuery(function($) {
-			$.get('http://gcc.gnu.org/onlinedocs/gcc-4.5.0/gcc.pdf', function(data) {
-				// localStorage.data = data;
-				setTimeout(function() {
-					$('body').html( data );
-				}, 1000);
-				
-			});
-		});
-		
-        var shortName = 'mydatabase';
-
-        var version = '1.0';
-
-        var displayName = 'My Important Database';
-
-        var maxSize = 65536; // in bytes
-
-        var db = openDatabase(shortName, version, displayName, maxSize);
-
-		var nullDataHandler = function() {};
-		var errorHandler = function() {};
-
-	    db.transaction(
-
-	        function (transaction) {
-
-
-
-	            /* The first query causes the transaction to (intentionally) fail if the table exists. */
-
-	            transaction.executeSql('CREATE TABLE people(id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL DEFAULT "John Doe", shirt TEXT NOT NULL DEFAULT "Purple");', [], nullDataHandler, errorHandler);
-
-	            /* These insertions will be skipped if the table already exists. */
-
-	            transaction.executeSql('insert into people (name, shirt) VALUES ("Joe", "Green");', [], nullDataHandler, errorHandler);
-
-	            transaction.executeSql('insert into people (name, shirt) VALUES ("Mark", "Blue");', [], nullDataHandler, errorHandler);
-
-	            transaction.executeSql('insert into people (name, shirt) VALUES ("Phil", "Orange");', [], nullDataHandler, errorHandler);
-
-	            transaction.executeSql('insert into people (name, shirt) VALUES ("jdoe", "Purple");', [], nullDataHandler, errorHandler);
-
-	        }
-
-	    );
-	
-		</script>
+		<script src="support/libs/json2.js" type="text/javascript" charset="utf-8"></script>	
+		<script src="support/libs/jquery-1.4.2.min.js" type="text/javascript" charset="utf-8"></script>		
+		<script src="support/javascripts/application_support.js" type="text/javascript" charset="utf-8"></script>
+		<script src="javascripts/application.js" type="text/javascript" charset="utf-8"></script>
 	</head>
 
 	<body onorientationchange='' style='margin: 0; width: 100%; height: 100%;'>
 		<div id="content">
-			Here's Captn Content
+			My Test Content
 		</div>
 	</body>
 </html>

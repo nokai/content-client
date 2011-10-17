@@ -1,0 +1,44 @@
+{
+    "strings": {
+        "applicationTitle": "Content Player",
+        "contentUpdateCheckMessage": "Checking for new content ...",
+        "downloadMessageFormatString": "Downloading %i of %i - \"%@\"",
+        "settingsSectionSyncTitle": "Sync",
+        "settingsSectionStorageTitle": "Storage",
+        "settingsSectionTitleDebug": "Debug",
+        "sync": "Check for Updates",
+        "reset": "Delete All Content"
+    },
+    
+    "contentServer.local": {
+        "scheme": "http",
+        "hostName": "localhost",
+        "port": "8087",
+        "relativeBasePath": "content",
+        "manifestName": "manifest.json",
+        "manifestHashFileName": "manifest.fingerprint",
+        "contentDirectoryName": "content",
+        "contentArchivesDirectoryName": "content_archives",
+        "ContentItemsDirectoryName": "content_items",
+        "ContentArchivesDirName": "content_archives_dir_name",
+        "ContentItemMetaDataList": "content_item_metadata_list",
+        "ContentItemArchiveFileName": "content_item_archive_file_name",
+        "ContentItems": "contentItems"
+    },
+    
+    "contentServer": {
+        "scheme": "https",
+        "hostName": "pyxis-dev.merck.com",
+        "port": "443",
+        "relativeBasePath": "content",
+        "manifestName": "manifest.json",
+        "manifestHashFileName": "manifest.fingerprint",
+        "contentDirectoryName": "content",
+        "contentArchivesDirectoryName": "content_archives",
+        "ContentItemsDirectoryName": "content_items",
+        "ContentArchivesDirName": "content_archives_dir_name",
+        "ContentItemMetaDataList": "content_item_metadata_list",
+        "ContentItemArchiveFileName": "content_item_archive_file_name",
+        "ContentItems": "contentItems"
+    }
+}
